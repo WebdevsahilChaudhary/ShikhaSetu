@@ -24,7 +24,7 @@ export default async function ClassPage({ params }: { params: { className: strin
   
   const { data: materials, error: materialsError } = await supabase
     .from('materials')
-    .select('*')
+    .select('*, categories(name)')
     .eq('class', className);
 
   const { data: categories, error: categoriesError } = await supabase

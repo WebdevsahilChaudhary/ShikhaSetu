@@ -32,24 +32,30 @@ export type Database = {
           category_id: string | null
           class: string
           created_at: string
+          file_path: string | null
           file_url: string
           id: string
+          size: number | null
           title: string
         }
         Insert: {
           category_id?: string | null
           class: string
           created_at?: string
+          file_path?: string | null
           file_url: string
           id?: string
+          size?: number | null
           title: string
         }
         Update: {
           category_id?: string | null
           class?: string
           created_at?: string
+          file_path?: string | null
           file_url?: string
           id?: string
+          size?: number | null
           title?: string
         }
         Relationships: [

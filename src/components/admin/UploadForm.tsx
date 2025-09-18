@@ -59,7 +59,7 @@ export function UploadForm({ categories }: UploadFormProps) {
 
     // 1. Upload file to Supabase Storage
     const filePath = `${values.class}/${Date.now()}-${file.name}`;
-    const { error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('materials') // bucket name
       .upload(filePath, file);
 
@@ -84,6 +84,8 @@ export function UploadForm({ categories }: UploadFormProps) {
       class: values.class,
       category_id: values.category_id,
       file_url: urlData.publicUrl,
+      file_path: uploadData.path,
+      size: file.size,
     });
 
     if (insertError) {
