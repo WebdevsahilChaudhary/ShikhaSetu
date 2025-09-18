@@ -43,11 +43,11 @@ Format your response using Markdown. Use lists, bold text, and paragraphs to mak
 {{#if history}}
 This is the conversation history:
 {{#each history}}
-{{#if (eq role 'user')}}
-Student: {{{content}}}
+{{#if (this.role === 'user')}}
+Student: {{{this.content}}}
 {{/if}}
-{{#if (eq role 'model')}}
-Tutor: {{{content}}}
+{{#if (this.role === 'model')}}
+Tutor: {{{this.content}}}
 {{/if}}
 {{/each}}
 {{/if}}
