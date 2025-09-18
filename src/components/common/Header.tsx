@@ -10,6 +10,16 @@ export function Header() {
         <span className="ml-2 text-xl font-headline font-bold text-primary">ShikshaSetu</span>
       </Link>
       <nav className="ml-auto flex gap-4 sm:gap-6">
+        <Button variant="ghost" asChild>
+          <Link href="#">
+            About Us
+          </Link>
+        </Button>
+        <Button variant="ghost" asChild>
+          <Link href="#">
+            Donate
+          </Link>
+        </Button>
         <Button variant="ghost" asChild className="hidden">
           <Link href="/admin">
             Admin Panel
