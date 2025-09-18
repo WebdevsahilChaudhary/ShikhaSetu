@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,25 +9,37 @@ import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
 import { Sparkles, Bot, User } from "lucide-react";
 import { answerDoubt } from "@/ai/flows/student-doubt-flow";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface ChatMessage {
+  role: 'user' | 'model';
+  content: string;
+}
 
 export default function AskAiPage() {
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [currentQuestion, setCurrentQuestion] = useState("");
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!question.trim()) return;
+    if (!currentQuestion.trim()) return;
 
+    const newHistory: ChatMessage[] = [...chatHistory, { role: 'user', content: currentQuestion }];
+    setChatHistory(newHistory);
+    setCurrentQuestion("");
     setLoading(true);
-    setAnswer("");
 
     try {
-      const response = await answerDoubt({ question });
-      setAnswer(response.answer);
+      const response = await answerDoubt({ 
+        question: currentQuestion,
+        history: chatHistory // send previous messages
+      });
+      setChatHistory([...newHistory, { role: 'model', content: response.answer }]);
     } catch (error) {
       console.error("Error fetching AI answer:", error);
-      setAnswer("Sorry, I encountered an error trying to answer your question. Please try again.");
+      const errorMessage = "Sorry, I encountered an error trying to answer your question. Please try again.";
+      setChatHistory([...newHistory, { role: 'model', content: errorMessage }]);
     } finally {
       setLoading(false);
     }
@@ -47,7 +60,7 @@ export default function AskAiPage() {
             </p>
           </div>
 
-          <Card>
+          <Card className="mb-8">
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="relative">
@@ -55,8 +68,8 @@ export default function AskAiPage() {
                    <Textarea
                     id="question"
                     placeholder="Type your question here... for example, 'Explain Newton's first law of motion.'"
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
+                    value={currentQuestion}
+                    onChange={(e) => setCurrentQuestion(e.target.value)}
                     className="pl-10"
                     rows={4}
                     disabled={loading}
@@ -69,26 +82,37 @@ export default function AskAiPage() {
             </CardContent>
           </Card>
           
-          {(loading || answer) && (
-            <Card className="mt-8">
-              <CardHeader className="flex flex-row items-center gap-3">
-                 <Bot className="h-6 w-6 text-primary" />
-                 <CardTitle>AI Response</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="space-y-2">
-                     <div className="animate-pulse bg-muted h-4 w-full rounded-md"></div>
-                     <div className="animate-pulse bg-muted h-4 w-5/6 rounded-md"></div>
-                     <div className="animate-pulse bg-muted h-4 w-3/4 rounded-md"></div>
-                  </div>
-                ) : (
-                  <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap">
-                    {answer}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          {chatHistory.length > 0 && (
+             <div className="space-y-6">
+              {chatHistory.map((message, index) => (
+                <Card key={index}>
+                  <CardHeader className="flex flex-row items-center gap-3">
+                    {message.role === 'model' ? <Bot className="h-6 w-6 text-primary" /> : <User className="h-6 w-6 text-foreground" />}
+                    <CardTitle>{message.role === 'model' ? 'AI Response' : 'Your Question'}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                     <article className="prose prose-sm max-w-none text-foreground">
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                     </article>
+                  </CardContent>
+                </Card>
+              ))}
+              {loading && (
+                 <Card>
+                   <CardHeader className="flex flex-row items-center gap-3">
+                     <Bot className="h-6 w-6 text-primary" />
+                     <CardTitle>AI Response</CardTitle>
+                   </CardHeader>
+                   <CardContent>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-4 w-5/6" />
+                        <Skeleton className="h-4 w-3/4" />
+                      </div>
+                   </CardContent>
+                 </Card>
+              )}
+             </div>
           )}
 
         </div>

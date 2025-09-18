@@ -11,12 +11,16 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AnswerDoubtInputSchema = z.object({
-  question: z.string().describe('The student\'s question or doubt.'),
+  question: z.string().describe("The student's current question or doubt."),
+  history: z.array(z.object({
+    role: z.enum(['user', 'model']),
+    content: z.string(),
+  })).describe('The history of the conversation so far.'),
 });
 export type AnswerDoubtInput = z.infer<typeof AnswerDoubtInputSchema>;
 
 const AnswerDoubtOutputSchema = z.object({
-  answer: z.string().describe('The AI-generated answer to the student\'s question.'),
+  answer: z.string().describe("The AI-generated answer to the student's question."),
 });
 export type AnswerDoubtOutput = z.infer<typeof AnswerDoubtOutputSchema>;
 
@@ -34,7 +38,21 @@ When a student asks a question, provide a step-by-step explanation if it's a pro
 
 Your answer should be encouraging and supportive. Behave like a friendly teacher.
 
-The student's question is:
+Format your response using Markdown. Use lists, bold text, and paragraphs to make the answer easy to read.
+
+{{#if history}}
+This is the conversation history:
+{{#each history}}
+{{#if (eq role 'user')}}
+Student: {{{content}}}
+{{/if}}
+{{#if (eq role 'model')}}
+Tutor: {{{content}}}
+{{/if}}
+{{/each}}
+{{/if}}
+
+The student's latest question is:
 '{{{question}}}'
 
 Provide your answer.`,
