@@ -65,6 +65,12 @@ const studentDoubtFlow = ai.defineFlow(
     outputSchema: AnswerDoubtOutputSchema,
   },
   async (input) => {
+    // Register a custom helper to allow for string comparison in the template.
+    const handlebars = require('handlebars');
+    handlebars.registerHelper('eq', function (a, b) {
+      return a === b;
+    });
+
     const {output} = await prompt(input);
     return output!;
   }
