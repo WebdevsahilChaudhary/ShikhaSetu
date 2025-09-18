@@ -3,6 +3,8 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -24,11 +26,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { Category } from "@/lib/types";
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
   class: z.string().min(1, "Please select a class."),
   category_id: z.string().min(1, "Please select a category."),
-  file: z.any().refine((file) => file?.length == 1, "File is required."),
+  file: z.any().refine((files) => files?.length == 1, "File is required."),
 });
 
 interface UploadFormProps {
@@ -37,6 +44,7 @@ interface UploadFormProps {
 
 export function UploadForm({ categories }: UploadFormProps) {
   const { toast } = useToast();
+  const router = useRouter();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -46,17 +54,51 @@ export function UploadForm({ categories }: UploadFormProps) {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // In a real app:
-    // 1. Upload `values.file[0]` to Supabase Storage.
-    // 2. Get the public URL.
-    // 3. Insert a new record into the `materials` table with the form data and the URL.
-    console.log(values);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const file = values.file[0] as File;
+
+    // 1. Upload file to Supabase Storage
+    const filePath = `${values.class}/${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage
+      .from('materials') // bucket name
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast({ variant: "destructive", title: "Upload Error", description: uploadError.message });
+      return;
+    }
+
+    // 2. Get public URL
+    const { data: urlData } = supabase.storage
+      .from('materials')
+      .getPublicUrl(filePath);
+
+    if (!urlData) {
+      toast({ variant: "destructive", title: "Error", description: "Could not get file URL." });
+      return;
+    }
+
+    // 3. Insert into materials table
+    const { error: insertError } = await supabase.from('materials').insert({
+      title: values.title,
+      class: values.class,
+      category_id: values.category_id,
+      file_url: urlData.publicUrl,
+    });
+
+    if (insertError) {
+      toast({ variant: "destructive", title: "Database Error", description: insertError.message });
+       // Optional: delete the file from storage if db insert fails
+      await supabase.storage.from('materials').remove([filePath]);
+      return;
+    }
+
     toast({
       title: "Upload Successful",
       description: `"${values.title}" has been uploaded.`,
     });
     form.reset();
+    router.refresh();
   }
 
   return (
@@ -132,18 +174,24 @@ export function UploadForm({ categories }: UploadFormProps) {
             <FormField
               control={form.control}
               name="file"
-              render={({ field: { onChange, value, ...rest }}) => (
-                <FormItem>
-                  <FormLabel>File</FormLabel>
-                  <FormControl>
-                    <Input type="file" onChange={(e) => onChange(e.target.files)} {...rest} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field: { onChange, value, ...rest }}) => {
+                // Next complains about the `value` prop on file inputs
+                const { ref, ...fieldProps } = rest;
+                return (
+                  <FormItem>
+                    <FormLabel>File</FormLabel>
+                    <FormControl>
+                      <Input type="file" onChange={(e) => onChange(e.target.files)} {...fieldProps} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )
+              }}
             />
 
-            <Button type="submit" className="font-semibold">Upload Material</Button>
+            <Button type="submit" className="font-semibold" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Uploading..." : "Upload Material"}
+            </Button>
           </form>
         </Form>
       </CardContent>

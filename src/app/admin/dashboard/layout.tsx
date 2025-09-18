@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   SidebarProvider,
   Sidebar,
@@ -17,6 +17,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookOpenCheck, FolderKanban, UploadCloud, LogOut } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+
+// Note: We are not using the shared supabase client here because we need to
+// use the client-side auth flow.
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
 
 export default function DashboardLayout({
   children,
@@ -24,6 +35,35 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        setUser(data.user);
+      } else {
+        router.push("/admin/login");
+      }
+      setLoading(false);
+    };
+    checkUser();
+  }, [router]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/admin/login");
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -66,16 +106,16 @@ export default function DashboardLayout({
           <div className="flex items-center gap-3">
              <Avatar className="h-9 w-9">
                <AvatarImage src="https://picsum.photos/seed/admin/40/40" alt="Admin" data-ai-hint="person face" />
-               <AvatarFallback>A</AvatarFallback>
+               <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'A'}</AvatarFallback>
              </Avatar>
              <div className="flex flex-col text-sm">
                 <span className="font-semibold text-sidebar-foreground">Admin</span>
-                <span className="text-muted-foreground">admin@shiksha.setu</span>
+                <span className="text-muted-foreground">{user?.email}</span>
              </div>
           </div>
-           <Button variant="ghost" size="icon" className="ml-auto" asChild>
-            <Link href="/"><LogOut /></Link>
-          </Button>
+           <Button variant="ghost" size="icon" className="ml-auto" onClick={handleLogout}>
+            <LogOut />
+           </Button>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="bg-secondary">

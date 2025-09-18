@@ -24,11 +24,13 @@ export function MaterialsDisplay({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Data is now fetched on the server, so we can reduce client-side loading simulation
+    // or base it on navigation events if needed. For now, a short delay for transition.
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 1000); // Simulate network delay
+    }, 200); // Reduced delay
     return () => clearTimeout(timer);
-  }, []);
+  }, [initialMaterials]); // Depend on initialMaterials to re-evaluate when props change
 
   const filteredMaterials = useMemo(() => {
     return initialMaterials.filter((material) => {

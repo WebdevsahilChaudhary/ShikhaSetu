@@ -1,15 +1,6 @@
-export type Category = {
-  id: string;
-  name: string;
-  created_at: string;
-};
+import type { Database } from './database.types';
 
-export type Material = {
-  id: string;
-  title: string;
-  class: string;
-  category_id: string;
-  file_url: string;
-  file_type: "pdf" | "doc" | "zip";
-  created_at: string;
+export type Category = Database['public']['Tables']['categories']['Row'];
+export type Material = Database['public']['Tables']['materials']['Row'] & {
+  file_type: "pdf" | "doc" | "zip"; // Add file_type as it's used in the frontend but not in db
 };

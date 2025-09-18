@@ -11,7 +11,7 @@ interface MaterialCardProps {
   index: number;
 }
 
-const fileTypeIcons = {
+const fileTypeIcons: Record<Material['file_type'], React.ReactNode> = {
   pdf: <FileText className="h-5 w-5" />,
   doc: <FileText className="h-5 w-5" />,
   zip: <FileArchive className="h-5 w-5" />,
@@ -32,7 +32,7 @@ export function MaterialCard({ material, index }: MaterialCardProps) {
         <CardContent className="flex-grow"></CardContent>
         <CardFooter>
           <Button asChild className="w-full font-semibold">
-            <a href={material.file_url} download>
+            <a href={material.file_url} download target="_blank" rel="noopener noreferrer">
               <Download className="mr-2 h-4 w-4" />
               Download
             </a>

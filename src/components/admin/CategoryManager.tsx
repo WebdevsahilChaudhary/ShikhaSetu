@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -33,12 +35,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
-import type { Category, Material } from "@/lib/types";
+import type { Category } from "@/lib/types";
 import { format } from "date-fns";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 interface CategoryManagerProps {
   initialCategories: Category[];
-  materials: Material[];
+  materials: { id: string, category_id: string | null }[];
 }
 
 export function CategoryManager({ initialCategories, materials }: CategoryManagerProps) {
@@ -47,8 +54,9 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
   const [newCategoryName, setNewCategoryName] = useState("");
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
-  const handleCreateCategory = () => {
+  const handleCreateCategory = async () => {
     if (newCategoryName.trim() === "") {
       toast({
         variant: "destructive",
@@ -57,29 +65,40 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
       });
       return;
     }
-    // In a real app, this would be an API call to Supabase.
-    const newCategory: Category = {
-      id: `cat-${Date.now()}`,
-      name: newCategoryName,
-      created_at: new Date().toISOString(),
-    };
-    setCategories([...categories, newCategory]);
-    setNewCategoryName("");
-    setIsNewCategoryDialogOpen(false);
-    toast({
-      title: "Success",
-      description: `Category "${newCategoryName}" created.`,
-    });
+
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([{ name: newCategoryName }])
+      .select();
+
+    if (error) {
+      toast({ variant: "destructive", title: "Error", description: error.message });
+    } else if (data) {
+      setCategories([...categories, data[0]]);
+      setNewCategoryName("");
+      setIsNewCategoryDialogOpen(false);
+      toast({
+        title: "Success",
+        description: `Category "${newCategoryName}" created.`,
+      });
+      router.refresh();
+    }
   };
 
-  const handleDeleteCategory = (category: Category) => {
-    // In a real app, this would be an API call to Supabase.
-    setCategories(categories.filter((c) => c.id !== category.id));
+  const handleDeleteCategory = async (category: Category) => {
+    const { error } = await supabase.from('categories').delete().match({ id: category.id });
+
+    if (error) {
+       toast({ variant: "destructive", title: "Error", description: error.message });
+    } else {
+      setCategories(categories.filter((c) => c.id !== category.id));
+      toast({
+        title: "Success",
+        description: `Category "${category.name}" deleted.`,
+      });
+      router.refresh();
+    }
     setCategoryToDelete(null);
-    toast({
-      title: "Success",
-      description: `Category "${category.name}" deleted.`,
-    });
   };
 
   const getMaterialCountForCategory = (categoryId: string) => {

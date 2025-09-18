@@ -1,10 +1,11 @@
-import { materials, categories } from "@/lib/data";
+import { supabase } from "@/lib/supabaseClient";
 import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
 import { MaterialsDisplay } from "@/components/student/MaterialsDisplay";
 
 export async function generateStaticParams() {
-  const classNames = [...new Set(materials.map((m) => m.class))];
+  // This could also be fetched from the database if classes are dynamic
+  const classNames = ['10', '12-science', '12-commerce', '12-arts'];
   return classNames.map((className) => ({
     className,
   }));
@@ -13,21 +14,46 @@ export async function generateStaticParams() {
 function getClassName(slug: string): string {
   if (slug === '10') return 'Class 10th';
   if (slug === '12-science') return 'Class 12th - Science';
+  if (slug === '12-commerce') return 'Class 12th - Commerce';
+  if (slug === '12-arts') return 'Class 12th - Arts';
   return 'Materials';
 }
 
-export default function ClassPage({ params }: { params: { className: string } }) {
+export default async function ClassPage({ params }: { params: { className: string } }) {
   const { className } = params;
-  const filteredMaterials = materials.filter((m) => m.class === className);
+  
+  const { data: materials, error: materialsError } = await supabase
+    .from('materials')
+    .select('*')
+    .eq('class', className);
+
+  const { data: categories, error: categoriesError } = await supabase
+    .from('categories')
+    .select('*');
+
   const pageTitle = getClassName(className);
+
+  if (materialsError || categoriesError) {
+    // You might want to show a proper error page here
+    return <div>Error loading data. Please try again later.</div>;
+  }
+  
+  const materialsWithFileType = materials?.map(material => {
+    const extension = material.file_url.split('.').pop()?.toLowerCase();
+    let file_type: 'pdf' | 'doc' | 'zip' = 'pdf'; // default
+    if (extension === 'pdf') file_type = 'pdf';
+    if (extension === 'doc' || extension === 'docx') file_type = 'doc';
+    if (extension === 'zip') file_type = 'zip';
+    return { ...material, file_type };
+  }) || [];
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       <main className="flex-1">
         <MaterialsDisplay
-          initialMaterials={filteredMaterials}
-          allCategories={categories}
+          initialMaterials={materialsWithFileType}
+          allCategories={categories || []}
           pageTitle={pageTitle}
         />
       </main>
