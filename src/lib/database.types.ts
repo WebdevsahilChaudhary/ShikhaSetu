@@ -11,16 +11,19 @@ export type Database = {
     Tables: {
       categories: {
         Row: {
+          class_association: string
           created_at: string
           id: string
           name: string
         }
         Insert: {
+          class_association: string
           created_at?: string
           id?: string
           name: string
         }
         Update: {
+          class_association?: string
           created_at?: string
           id?: string
           name?: string

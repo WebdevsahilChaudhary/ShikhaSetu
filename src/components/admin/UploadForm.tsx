@@ -25,6 +25,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { Category } from "@/lib/types";
+import { useMemo } from "react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,6 +54,16 @@ export function UploadForm({ categories }: UploadFormProps) {
       category_id: "",
     },
   });
+
+  const selectedClass = form.watch("class");
+
+  const availableCategories = useMemo(() => {
+    if (!selectedClass) return [];
+    const classNumber = selectedClass.startsWith("12") ? "12" : "10";
+    return categories.filter(
+      (cat) => cat.class_association === classNumber || cat.class_association === "both"
+    );
+  }, [selectedClass, categories]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const file = values.file[0] as File;
@@ -153,14 +164,18 @@ export function UploadForm({ categories }: UploadFormProps) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      disabled={!selectedClass}
+                    >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a category" />
+                          <SelectValue placeholder={selectedClass ? "Select a category" : "Select a class first"} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {categories.map((cat) => (
+                        {availableCategories.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>
                             {cat.name}
                           </SelectItem>
