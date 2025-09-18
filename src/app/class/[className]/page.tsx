@@ -27,9 +27,14 @@ export default async function ClassPage({ params }: { params: { className: strin
     .select('*, categories(name)')
     .eq('class', className);
 
+  // Determine the class number ('10' or '12') for filtering categories
+  const classNumberForFilter = className.startsWith('12') ? '12' : '10';
+
   const { data: categories, error: categoriesError } = await supabase
     .from('categories')
-    .select('*');
+    .select('*')
+    .in('class_association', [classNumberForFilter, 'both']);
+
 
   const pageTitle = getClassName(className);
 
