@@ -11,12 +11,12 @@ export function Header() {
       </Link>
       <nav className="ml-auto flex gap-4 sm:gap-6">
         <Button variant="ghost" asChild>
-          <Link href="#">
+          <Link href="/about">
             About Us
           </Link>
         </Button>
         <Button variant="ghost" asChild>
-          <Link href="#">
+          <Link href="/donate">
             Donate
           </Link>
         </Button>
