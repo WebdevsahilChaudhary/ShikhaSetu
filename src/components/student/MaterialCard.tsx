@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, FileZip } from "lucide-react";
+import { Download, FileText, FileArchive } from "lucide-react";
 import type { Material } from "@/lib/types";
 
 interface MaterialCardProps {
@@ -14,7 +14,7 @@ interface MaterialCardProps {
 const fileTypeIcons = {
   pdf: <FileText className="h-5 w-5" />,
   doc: <FileText className="h-5 w-5" />,
-  zip: <FileZip className="h-5 w-5" />,
+  zip: <FileArchive className="h-5 w-5" />,
 };
 
 export function MaterialCard({ material, index }: MaterialCardProps) {
