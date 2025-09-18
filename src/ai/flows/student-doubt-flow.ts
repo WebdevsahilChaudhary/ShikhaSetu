@@ -12,10 +12,6 @@ import {z} from 'genkit';
 
 const AnswerDoubtInputSchema = z.object({
   question: z.string().describe("The student's current question or doubt."),
-  history: z.array(z.object({
-    role: z.enum(['user', 'model']),
-    content: z.string(),
-  })).describe('The history of the conversation so far.'),
 });
 export type AnswerDoubtInput = z.infer<typeof AnswerDoubtInputSchema>;
 
@@ -40,19 +36,7 @@ Your answer should be encouraging and supportive. Behave like a friendly teacher
 
 Format your response using Markdown. Use lists, bold text, and paragraphs to make the answer easy to read.
 
-{{#if history}}
-This is the conversation history:
-{{#each history}}
-{{#if (eq this.role 'user')}}
-Student: {{{this.content}}}
-{{/if}}
-{{#if (eq this.role 'model')}}
-Tutor: {{{this.content}}}
-{{/if}}
-{{/each}}
-{{/if}}
-
-The student's latest question is:
+The student's question is:
 '{{{question}}}'
 
 Provide your answer.`,
@@ -65,12 +49,6 @@ const studentDoubtFlow = ai.defineFlow(
     outputSchema: AnswerDoubtOutputSchema,
   },
   async (input) => {
-    // Register a custom helper to allow for string comparison in the template.
-    const handlebars = require('handlebars');
-    handlebars.registerHelper('eq', function (a, b) {
-      return a === b;
-    });
-
     const {output} = await prompt(input);
     return output!;
   }

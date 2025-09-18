@@ -11,36 +11,31 @@ import { Sparkles, Bot, User } from "lucide-react";
 import { answerDoubt } from "@/ai/flows/student-doubt-flow";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface ChatMessage {
-  role: 'user' | 'model';
-  content: string;
-}
-
 export default function AskAiPage() {
   const [currentQuestion, setCurrentQuestion] = useState("");
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [lastAnswer, setLastAnswer] = useState<string | null>(null);
+  const [lastQuestion, setLastQuestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentQuestion.trim()) return;
 
-    const newHistory: ChatMessage[] = [...chatHistory, { role: 'user', content: currentQuestion }];
-    setChatHistory(newHistory);
-    setCurrentQuestion("");
     setLoading(true);
+    setLastQuestion(currentQuestion);
+    setLastAnswer(null); // Clear previous answer
 
     try {
       const response = await answerDoubt({ 
         question: currentQuestion,
-        history: chatHistory // send previous messages
       });
-      setChatHistory([...newHistory, { role: 'model', content: response.answer }]);
+      setLastAnswer(response.answer);
     } catch (error) {
       console.error("Error fetching AI answer:", error);
       const errorMessage = "Sorry, I encountered an error trying to answer your question. Please try again.";
-      setChatHistory([...newHistory, { role: 'model', content: errorMessage }]);
+      setLastAnswer(errorMessage);
     } finally {
+      setCurrentQuestion("");
       setLoading(false);
     }
   };
@@ -82,21 +77,22 @@ export default function AskAiPage() {
             </CardContent>
           </Card>
           
-          {chatHistory.length > 0 && (
+          {(loading || lastAnswer) && (
              <div className="space-y-6">
-              {chatHistory.map((message, index) => (
-                <Card key={index}>
+              {lastQuestion && (
+                <Card>
                   <CardHeader className="flex flex-row items-center gap-3">
-                    {message.role === 'model' ? <Bot className="h-6 w-6 text-primary" /> : <User className="h-6 w-6 text-foreground" />}
-                    <CardTitle>{message.role === 'model' ? 'AI Response' : 'Your Question'}</CardTitle>
+                    <User className="h-6 w-6 text-foreground" />
+                    <CardTitle>Your Question</CardTitle>
                   </CardHeader>
                   <CardContent>
                      <article className="prose prose-sm max-w-none text-foreground">
-                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                        <ReactMarkdown>{lastQuestion}</ReactMarkdown>
                      </article>
                   </CardContent>
                 </Card>
-              ))}
+              )}
+
               {loading && (
                  <Card>
                    <CardHeader className="flex flex-row items-center gap-3">
@@ -111,6 +107,20 @@ export default function AskAiPage() {
                       </div>
                    </CardContent>
                  </Card>
+              )}
+
+              {lastAnswer && !loading && (
+                 <Card>
+                  <CardHeader className="flex flex-row items-center gap-3">
+                    <Bot className="h-6 w-6 text-primary" />
+                    <CardTitle>AI Response</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                     <article className="prose prose-sm max-w-none text-foreground">
+                        <ReactMarkdown>{lastAnswer}</ReactMarkdown>
+                     </article>
+                  </CardContent>
+                </Card>
               )}
              </div>
           )}
