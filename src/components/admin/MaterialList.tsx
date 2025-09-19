@@ -63,8 +63,8 @@ export function MaterialList({ materials: initialMaterials }: MaterialListProps)
 
     if (storageError) {
         toast({ variant: "destructive", title: "Storage Error", description: storageError.message });
-        // We might not want to proceed if storage deletion fails
-        // return; 
+        // We might not want to proceed if storage deletion fails, but for now we'll allow it.
+        // In a production scenario, you might want to stop here.
     }
 
     // 2. Delete from database
