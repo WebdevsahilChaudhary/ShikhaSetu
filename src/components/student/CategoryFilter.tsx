@@ -31,6 +31,7 @@ const CategoryNode = ({
   level?: number;
 }) => {
   const children = allCategories.filter((c) => c.parent_id === category.id);
+  const isSelected = selectedCategory === category.id;
 
   if (children.length === 0) {
     return (
@@ -38,7 +39,7 @@ const CategoryNode = ({
         variant="ghost"
         className={cn(
           "w-full justify-start text-left h-auto py-2",
-          selectedCategory === category.id && "bg-accent text-accent-foreground"
+          isSelected && "bg-accent text-accent-foreground"
         )}
         style={{ paddingLeft: `${level * 1.5 + 1}rem` }}
         onClick={() => onSelectCategory(category.id)}
@@ -48,23 +49,34 @@ const CategoryNode = ({
     );
   }
 
+  // Determine if a child of this node is selected
+  const isChildSelected = (catId: string): boolean => {
+    if (selectedCategory === catId) return true;
+    const childrenOfCat = allCategories.filter(c => c.parent_id === catId);
+    return childrenOfCat.some(child => isChildSelected(child.id));
+  };
+
+  const defaultOpenValue = isChildSelected(category.id) ? [category.id] : [];
+
   return (
-    <Accordion type="multiple" className="w-full">
+    <Accordion type="multiple" className="w-full" defaultValue={defaultOpenValue}>
       <AccordionItem value={category.id} className="border-none">
-        <AccordionTrigger
-          className={cn(
-            "hover:no-underline justify-start font-normal hover:bg-accent rounded-md text-left",
-            selectedCategory === category.id && "bg-accent text-accent-foreground"
-          )}
-          style={{ paddingLeft: `${level * 1.5 + 1}rem` }}
-          onClick={(e) => {
-             // Prevent accordion from toggling when clicking the category itself
-             if ((e.target as HTMLElement).closest('.accordion-content')) return;
-             onSelectCategory(category.id);
-          }}
+        <div 
+            className={cn(
+                "flex items-center rounded-md",
+                isSelected && "bg-accent text-accent-foreground"
+            )}
+             style={{ paddingLeft: `${level * 1.5 + 1}rem` }}
         >
-          {category.name}
-        </AccordionTrigger>
+          <AccordionTrigger
+            className={cn(
+              "hover:no-underline flex-1 justify-start font-normal py-2 text-left"
+            )}
+             onClick={() => onSelectCategory(category.id)}
+          >
+            {category.name}
+          </AccordionTrigger>
+        </div>
         <AccordionContent className="pt-1">
           {children.map((child) => (
             <CategoryNode

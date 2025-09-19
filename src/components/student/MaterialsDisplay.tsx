@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { CategoryFilter } from "./CategoryFilter";
 import { MaterialCard } from "./MaterialCard";
-import { Skeleton } from "@/components/ui/skeleton";
 import type { Material, Category } from "@/lib/types";
 
 interface MaterialsDisplayProps {
@@ -21,27 +20,31 @@ export function MaterialsDisplay({
 }: MaterialsDisplayProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Data is now fetched on the server, so we can reduce client-side loading simulation
-    // or base it on navigation events if needed. For now, a short delay for transition.
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 200); // Reduced delay
-    return () => clearTimeout(timer);
-  }, [initialMaterials]); // Depend on initialMaterials to re-evaluate when props change
 
   const filteredMaterials = useMemo(() => {
+    // If a category is selected, we need to find all of its descendants
+    const getDescendantIds = (categoryId: string): string[] => {
+      const children = allCategories.filter(c => c.parent_id === categoryId);
+      let ids = [categoryId];
+      children.forEach(child => {
+        ids = [...ids, ...getDescendantIds(child.id)];
+      });
+      return ids;
+    };
+
+    const categoryIdsToFilter = selectedCategory ? getDescendantIds(selectedCategory) : null;
+
     return initialMaterials.filter((material) => {
       const matchesCategory =
-        !selectedCategory || material.category_id === selectedCategory;
+        !categoryIdsToFilter || (material.category_id && categoryIdsToFilter.includes(material.category_id));
+      
       const matchesSearch = material.title
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
+        
       return matchesCategory && matchesSearch;
     });
-  }, [initialMaterials, selectedCategory, searchQuery]);
+  }, [initialMaterials, selectedCategory, searchQuery, allCategories]);
 
   return (
     <div className="container mx-auto px-4 md:px-6 py-8">
@@ -65,33 +68,18 @@ export function MaterialsDisplay({
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          {loading ? (
+          
+          {filteredMaterials.length > 0 ? (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex flex-col space-y-3">
-                  <Skeleton className="h-[125px] w-full rounded-xl" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-4/5" />
-                    <Skeleton className="h-4 w-3/5" />
-                  </div>
-                </div>
+              {filteredMaterials.map((material, index) => (
+                <MaterialCard key={material.id} material={material} index={index} />
               ))}
             </div>
           ) : (
-            <>
-              {filteredMaterials.length > 0 ? (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredMaterials.map((material, index) => (
-                    <MaterialCard key={material.id} material={material} index={index} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <h3 className="text-xl font-semibold">No Materials Found</h3>
-                  <p className="text-muted-foreground mt-2">Try adjusting your search or filters.</p>
-                </div>
-              )}
-            </>
+            <div className="text-center py-16">
+              <h3 className="text-xl font-semibold">No Materials Found</h3>
+              <p className="text-muted-foreground mt-2">Try adjusting your search or filters.</p>
+            </div>
           )}
         </div>
       </div>
