@@ -3,12 +3,10 @@ import { supabase } from "@/lib/supabaseClient";
 import { notFound } from "next/navigation";
 
 export default async function EditMaterialPage({ params }: { params: { id: string } }) {
-  const { id } = params;
-
   const { data: material, error: materialError } = await supabase
     .from('materials')
     .select('*, categories(id, name)')
-    .eq('id', id)
+    .eq('id', params.id)
     .single();
 
   if (materialError || !material) {
