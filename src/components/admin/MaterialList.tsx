@@ -49,22 +49,18 @@ export function MaterialList({ materials: initialMaterials }: MaterialListProps)
   const { toast } = useToast();
 
   const handleDelete = async (material: Material) => {
-    if (!material.file_path) {
-        toast({ variant: "destructive", title: "Error", description: "File path is missing. Cannot delete from storage." });
-        return;
-    }
-
-    // 1. Delete from storage
-    const { error: storageError } = await supabase.storage
-        .from('materials')
-        .remove([material.file_path]);
-
-    if (storageError) {
-        // Don't toast a storage error if the file is already gone
-        if (storageError.message !== 'The resource was not found') {
-            toast({ variant: "destructive", title: "Storage Error", description: storageError.message });
-            return; // Stop if we can't delete the file
-        }
+    // 1. Try to delete from storage if a path exists
+    if (material.file_path) {
+      const { error: storageError } = await supabase.storage
+          .from('materials')
+          .remove([material.file_path]);
+      
+      // Log storage error but don't stop, unless it's a critical error other than "not found"
+      if (storageError && storageError.message !== 'The resource was not found') {
+          toast({ variant: "destructive", title: "Storage Error", description: `Could not delete file: ${storageError.message}` });
+          // Depending on policy, you might want to return here.
+          // For now, we'll allow DB deletion even if storage deletion fails.
+      }
     }
 
     // 2. Delete from database
