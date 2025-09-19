@@ -77,7 +77,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
 
     const { data, error } = await supabase
       .from('categories')
-      .insert([{ name: newCategoryName, class_association: newClassAssociation, parent_id: newParentId }])
+      .insert([{ name: newCategoryName, class_association: newClassAssociation, parent_id: newParentId === 'null' ? null : newParentId }])
       .select()
       .single();
 
@@ -113,7 +113,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
 
     const { data, error } = await supabase
       .from('categories')
-      .update({ name: editCategoryName, class_association: editClassAssociation, parent_id: editParentId })
+      .update({ name: editCategoryName, class_association: editClassAssociation, parent_id: editParentId === 'null' ? null : editParentId })
       .match({ id: categoryToEdit.id })
       .select()
       .single();
@@ -262,7 +262,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-parent-category">Parent Category (Optional)</Label>
-                 <Select onValueChange={setEditParentId} value={editParentId || undefined}>
+                 <Select onValueChange={setEditParentId} value={editParentId || 'null'}>
                     <SelectTrigger id="edit-parent-category">
                       <SelectValue placeholder="Select a parent category" />
                     </SelectTrigger>
