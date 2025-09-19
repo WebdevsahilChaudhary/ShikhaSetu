@@ -45,10 +45,8 @@ const classMap: Record<string, string> = {
 }
 
 export function MaterialList({ materials: initialMaterials }: MaterialListProps) {
-  const [materials, setMaterials] = useState(initialMaterials);
   const [materialToDelete, setMaterialToDelete] = useState<Material | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
 
   const handleDelete = async (material: Material) => {
     if (!material.file_path) {
@@ -62,9 +60,11 @@ export function MaterialList({ materials: initialMaterials }: MaterialListProps)
         .remove([material.file_path]);
 
     if (storageError) {
-        toast({ variant: "destructive", title: "Storage Error", description: storageError.message });
-        // We might not want to proceed if storage deletion fails, but for now we'll allow it.
-        // In a production scenario, you might want to stop here.
+        // Don't toast a storage error if the file is already gone
+        if (storageError.message !== 'The resource was not found') {
+            toast({ variant: "destructive", title: "Storage Error", description: storageError.message });
+            return; // Stop if we can't delete the file
+        }
     }
 
     // 2. Delete from database
@@ -73,9 +73,9 @@ export function MaterialList({ materials: initialMaterials }: MaterialListProps)
     if (dbError) {
         toast({ variant: "destructive", title: "Database Error", description: dbError.message });
     } else {
-        setMaterials(materials.filter((m) => m.id !== material.id));
         toast({ title: "Success", description: "Material deleted successfully." });
-        router.refresh();
+        // Force a full page reload to ensure the list is re-fetched from the DB
+        window.location.reload();
     }
     setMaterialToDelete(null);
   };
@@ -94,7 +94,7 @@ export function MaterialList({ materials: initialMaterials }: MaterialListProps)
             </TableRow>
           </TableHeader>
           <TableBody>
-            {materials.map((material) => (
+            {initialMaterials.map((material) => (
               <TableRow key={material.id}>
                 <TableCell className="font-medium">{material.title}</TableCell>
                 <TableCell>{classMap[material.class] || material.class}</TableCell>
