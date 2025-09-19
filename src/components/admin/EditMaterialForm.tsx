@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -24,9 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import type { Category } from "@/lib/types";
+import type { Category, Material } from "@/lib/types";
 import { useMemo } from "react";
-import React from "react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,12 +37,8 @@ const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
   class: z.string().min(1, "Please select a class."),
   category_id: z.string().optional(),
-  file: z.any().refine((files) => files?.length == 1, "File is required."),
 });
 
-interface UploadFormProps {
-  categories: Category[];
-}
 
 // Helper function to render categories and their children recursively
 const renderCategoryOptions = (
@@ -69,15 +65,21 @@ const renderCategoryOptions = (
   return options;
 };
 
-export function UploadForm({ categories }: UploadFormProps) {
+interface EditMaterialFormProps {
+  material: Material;
+  categories: Category[];
+}
+
+export function EditMaterialForm({ material, categories }: EditMaterialFormProps) {
   const { toast } = useToast();
   const router = useRouter();
+  
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: "",
-      class: "",
-      category_id: "",
+      title: material.title,
+      class: material.class,
+      category_id: material.category_id || "",
     },
   });
 
@@ -92,53 +94,22 @@ export function UploadForm({ categories }: UploadFormProps) {
   }, [selectedClass, categories]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const file = values.file[0] as File;
-
-    // 1. Upload file to Supabase Storage
-    const filePath = `${values.class}/${Date.now()}-${file.name}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('materials') // bucket name
-      .upload(filePath, file);
-
-    if (uploadError) {
-      toast({ variant: "destructive", title: "Upload Error", description: uploadError.message });
-      return;
-    }
-
-    // 2. Get public URL
-    const { data: urlData } = supabase.storage
+    const { error } = await supabase
       .from('materials')
-      .getPublicUrl(filePath);
+      .update({
+        title: values.title,
+        class: values.class,
+        category_id: values.category_id || null,
+      })
+      .eq('id', material.id);
 
-    if (!urlData) {
-      toast({ variant: "destructive", title: "Error", description: "Could not get file URL." });
-      return;
+    if (error) {
+      toast({ variant: "destructive", title: "Update Error", description: error.message });
+    } else {
+      toast({ title: "Success", description: "Material updated successfully." });
+      router.push('/admin/dashboard/materials');
+      router.refresh();
     }
-
-    // 3. Insert into materials table
-    const { error: insertError } = await supabase.from('materials').insert({
-      title: values.title,
-      class: values.class,
-      category_id: values.category_id || null,
-      file_url: urlData.publicUrl,
-      file_path: uploadData.path,
-      size: file.size,
-    });
-
-    if (insertError) {
-      toast({ variant: "destructive", title: "Database Error", description: insertError.message });
-       // Optional: delete the file from storage if db insert fails
-      await supabase.storage.from('materials').remove([filePath]);
-      return;
-    }
-
-    toast({
-      title: "Upload Successful",
-      description: `"${values.title}" has been uploaded.`,
-    });
-    form.reset();
-    // A full page reload might be better to ensure all state is fresh across components
-    window.location.reload();
   }
 
   return (
@@ -193,10 +164,10 @@ export function UploadForm({ categories }: UploadFormProps) {
                 name="category_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Category (Optional)</FormLabel>
-                    <Select
+                    <FormLabel>Category</FormLabel>
+                     <Select
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value || ""}
                       disabled={!selectedClass}
                     >
                       <FormControl>
@@ -205,7 +176,8 @@ export function UploadForm({ categories }: UploadFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {availableCategories.length > 0 && (
+                         <SelectItem value="">None</SelectItem>
+                         {availableCategories.length > 0 && (
                           renderCategoryOptions(availableCategories, availableCategories)
                         )}
                       </SelectContent>
@@ -216,25 +188,8 @@ export function UploadForm({ categories }: UploadFormProps) {
               />
             </div>
             
-            <FormField
-              control={form.control}
-              name="file"
-              render={({ field: { onChange, value, ...rest }}) => {
-                const { ref, ...fieldProps } = rest;
-                return (
-                  <FormItem>
-                    <FormLabel>File</FormLabel>
-                    <FormControl>
-                      <Input type="file" onChange={(e) => onChange(e.target.files)} {...fieldProps} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )
-              }}
-            />
-
             <Button type="submit" className="font-semibold" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Uploading..." : "Upload Material"}
+              {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </form>
         </Form>

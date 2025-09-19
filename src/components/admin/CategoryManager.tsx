@@ -5,14 +5,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -43,7 +35,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import type { Category } from "@/lib/types";
-import { format } from "date-fns";
+import { CategoryTree } from "./CategoryTree";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -52,10 +44,9 @@ const supabase = createClient(
 
 interface CategoryManagerProps {
   initialCategories: Category[];
-  materials: { id: string, category_id: string | null }[];
 }
 
-export function CategoryManager({ initialCategories, materials }: CategoryManagerProps) {
+export function CategoryManager({ initialCategories }: CategoryManagerProps) {
   const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [isNewCategoryDialogOpen, setIsNewCategoryDialogOpen] = useState(false);
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
@@ -64,8 +55,12 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
 
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newClassAssociation, setNewClassAssociation] = useState<string | null>(null);
+  const [newParentId, setNewParentId] = useState<string | null>(null);
+  
   const [editCategoryName, setEditCategoryName] = useState("");
   const [editClassAssociation, setEditClassAssociation] = useState<string | null>(null);
+  const [editParentId, setEditParentId] = useState<string | null>(null);
+
 
   const { toast } = useToast();
   const router = useRouter();
@@ -82,7 +77,7 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
 
     const { data, error } = await supabase
       .from('categories')
-      .insert([{ name: newCategoryName, class_association: newClassAssociation }])
+      .insert([{ name: newCategoryName, class_association: newClassAssociation, parent_id: newParentId }])
       .select()
       .single();
 
@@ -92,6 +87,7 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
       setCategories([data, ...categories]);
       setNewCategoryName("");
       setNewClassAssociation(null);
+      setNewParentId(null);
       setIsNewCategoryDialogOpen(false);
       toast({
         title: "Success",
@@ -105,6 +101,7 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
     setCategoryToEdit(category);
     setEditCategoryName(category.name);
     setEditClassAssociation(category.class_association);
+    setEditParentId(category.parent_id);
     setIsEditCategoryDialogOpen(true);
   };
 
@@ -116,7 +113,7 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
 
     const { data, error } = await supabase
       .from('categories')
-      .update({ name: editCategoryName, class_association: editClassAssociation })
+      .update({ name: editCategoryName, class_association: editClassAssociation, parent_id: editParentId })
       .match({ id: categoryToEdit.id })
       .select()
       .single();
@@ -131,6 +128,20 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
       router.refresh();
     }
   };
+  
+  const openDeleteDialog = (category: Category) => {
+     // Check if the category has children
+    const children = categories.filter(c => c.parent_id === category.id);
+    if (children.length > 0) {
+      toast({
+        variant: "destructive",
+        title: "Cannot Delete Category",
+        description: "This category has sub-categories. Please delete or re-assign them first.",
+      });
+      return;
+    }
+    setCategoryToDelete(category);
+  }
 
   const handleDeleteCategory = async (category: Category) => {
     const { error } = await supabase.from('categories').delete().match({ id: category.id });
@@ -147,16 +158,8 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
     }
     setCategoryToDelete(null);
   };
-
-  const getMaterialCountForCategory = (categoryId: string) => {
-    return materials.filter(m => m.category_id === categoryId).length;
-  }
   
-  const classAssociationMap: {[key: string]: string} = {
-    '10': 'Class 10',
-    '12': 'Class 12',
-    'both': 'Both'
-  }
+  const topLevelCategories = categories.filter(c => !c.parent_id);
 
   return (
     <>
@@ -172,7 +175,7 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
             <DialogHeader>
               <DialogTitle>Create New Category</DialogTitle>
               <DialogDescription>
-                This category will be available for selection when uploading new materials.
+                You can optionally assign this to a parent category to create a hierarchy.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -198,6 +201,18 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
                     </SelectContent>
                   </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="parent-category">Parent Category (Optional)</Label>
+                 <Select onValueChange={setNewParentId} value={newParentId || undefined}>
+                    <SelectTrigger id="parent-category">
+                      <SelectValue placeholder="Select a parent category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="null">None (Top-Level)</SelectItem>
+                      {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" onClick={() => setIsNewCategoryDialogOpen(false)} variant="outline">Cancel</Button>
@@ -209,41 +224,12 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
         </Dialog>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Class</TableHead>
-              <TableHead>Materials</TableHead>
-              <TableHead>Created At</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {categories.map((category) => (
-              <TableRow key={category.id}>
-                <TableCell className="font-medium">{category.name}</TableCell>
-                <TableCell>{classAssociationMap[category.class_association] || 'N/A'}</TableCell>
-                <TableCell>{getMaterialCountForCategory(category.id)}</TableCell>
-                <TableCell>{format(new Date(category.created_at), "PPP")}</TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => openEditDialog(category)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setCategoryToDelete(category)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <div className="border rounded-lg p-4">
+        <CategoryTree 
+          categories={categories}
+          onEdit={openEditDialog}
+          onDelete={openDeleteDialog}
+        />
       </div>
 
       {/* Edit Category Dialog */}
@@ -274,6 +260,18 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
                     </SelectContent>
                   </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-parent-category">Parent Category (Optional)</Label>
+                 <Select onValueChange={setEditParentId} value={editParentId || undefined}>
+                    <SelectTrigger id="edit-parent-category">
+                      <SelectValue placeholder="Select a parent category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="null">None (Top-Level)</SelectItem>
+                      {categories.filter(c => c.id !== categoryToEdit?.id).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditCategoryDialogOpen(false)}>Cancel</Button>
@@ -291,7 +289,7 @@ export function CategoryManager({ initialCategories, materials }: CategoryManage
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the
               <span className="font-bold"> "{categoryToDelete?.name}" </span>
-              category. Any materials in this category will not be associated with it anymore.
+              category. Any materials associated with this category will be un-categorized.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

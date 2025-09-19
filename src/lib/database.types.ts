@@ -15,20 +15,31 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          parent_id: string | null
         }
         Insert: {
           class_association: string
           created_at?: string
           id?: string
           name: string
+          parent_id?: string | null
         }
         Update: {
           class_association?: string
           created_at?: string
           id?: string
           name?: string
+          parent_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       materials: {
         Row: {

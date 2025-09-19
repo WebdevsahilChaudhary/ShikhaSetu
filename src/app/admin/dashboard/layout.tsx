@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpenCheck, FolderKanban, UploadCloud, LogOut } from "lucide-react";
+import { BookOpenCheck, FolderKanban, UploadCloud, LogOut, FileStack } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -85,6 +85,18 @@ export default function DashboardLayout({
                 <Link href="/admin/dashboard">
                   <UploadCloud />
                   <span>Uploads</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith("/admin/dashboard/materials")}
+                tooltip="Manage Materials"
+              >
+                <Link href="/admin/dashboard/materials">
+                  <FileStack />
+                  <span>Materials</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
