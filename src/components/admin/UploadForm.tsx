@@ -77,7 +77,7 @@ export function UploadForm({ categories }: UploadFormProps) {
     defaultValues: {
       title: "",
       class: "",
-      category_id: "",
+      category_id: "null",
     },
   });
 
@@ -119,7 +119,7 @@ export function UploadForm({ categories }: UploadFormProps) {
     const { error: insertError } = await supabase.from('materials').insert({
       title: values.title,
       class: values.class,
-      category_id: values.category_id || null,
+      category_id: values.category_id === 'null' ? null : values.category_id,
       file_url: urlData.publicUrl,
       file_path: uploadData.path,
       size: file.size,
@@ -169,7 +169,7 @@ export function UploadForm({ categories }: UploadFormProps) {
                     <FormLabel>Class</FormLabel>
                     <Select onValueChange={(value) => {
                       field.onChange(value);
-                      form.setValue('category_id', ''); // Reset category on class change
+                      form.setValue('category_id', 'null'); // Reset category on class change
                     }} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -205,6 +205,7 @@ export function UploadForm({ categories }: UploadFormProps) {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="null">None</SelectItem>
                         {availableCategories.length > 0 && (
                           renderCategoryOptions(availableCategories, availableCategories)
                         )}

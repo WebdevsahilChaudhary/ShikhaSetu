@@ -79,7 +79,7 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
     defaultValues: {
       title: material.title,
       class: material.class,
-      category_id: material.category_id || "",
+      category_id: material.category_id || "null",
     },
   });
 
@@ -99,7 +99,7 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
       .update({
         title: values.title,
         class: values.class,
-        category_id: values.category_id || null,
+        category_id: values.category_id === 'null' ? null : values.category_id,
       })
       .eq('id', material.id);
 
@@ -140,7 +140,7 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
                     <FormLabel>Class</FormLabel>
                     <Select onValueChange={(value) => {
                       field.onChange(value);
-                      form.setValue('category_id', ''); // Reset category on class change
+                      form.setValue('category_id', 'null'); // Reset category on class change
                     }} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -167,7 +167,7 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
                     <FormLabel>Category</FormLabel>
                      <Select
                       onValueChange={field.onChange}
-                      value={field.value || ""}
+                      value={field.value || "null"}
                       disabled={!selectedClass}
                     >
                       <FormControl>
@@ -176,7 +176,7 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                         <SelectItem value="">None</SelectItem>
+                         <SelectItem value="null">None</SelectItem>
                          {availableCategories.length > 0 && (
                           renderCategoryOptions(availableCategories, availableCategories)
                         )}
