@@ -11,11 +11,6 @@ export function Header() {
       </Link>
       <nav className="ml-auto flex gap-4 sm:gap-6">
         <Button variant="ghost" asChild>
-          <Link href="/ask-ai">
-            Ask AI
-          </Link>
-        </Button>
-        <Button variant="ghost" asChild>
           <Link href="/about">
             About Us
           </Link>
