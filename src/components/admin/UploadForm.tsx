@@ -54,7 +54,6 @@ const renderCategoryOptions = (
         {item.name}
       </SelectItem>
     );
-    // Recursively render children
     const childOptions = renderCategoryOptions(allCategories, allCategories, item.id, level + 1);
     options = options.concat(childOptions);
   });
@@ -167,7 +166,7 @@ export function UploadForm({ categories }: UploadFormProps) {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a class" />
-                        </Trigger>
+                        </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="10">Class 10th</SelectItem>
@@ -199,9 +198,8 @@ export function UploadForm({ categories }: UploadFormProps) {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="null">None</SelectItem>
-                        {availableCategories.length > 0 && (
-                          renderCategoryOptions(availableCategories, availableCategories)
-                        )}
+                        {availableCategories.length > 0 &&
+                          renderCategoryOptions(availableCategories, availableCategories)}
                       </SelectContent>
                     </Select>
                     <FormMessage />

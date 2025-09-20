@@ -52,7 +52,6 @@ const renderCategoryOptions = (
         {item.name}
       </SelectItem>
     );
-    // Recursively render children
     const childOptions = renderCategoryOptions(allCategories, allCategories, item.id, level + 1);
     options = options.concat(childOptions);
   });
@@ -89,7 +88,10 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
   }, [selectedClass, categories]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const result = await updateMaterialAction(material.id, values);
+    const result = await updateMaterialAction(material.id, {
+        ...values,
+        category_id: values.category_id || null
+    });
 
     if (result.success) {
       toast({ title: "Success", description: "Material updated successfully." });
@@ -132,7 +134,7 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a class" />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="10">Class 10th</SelectItem>
@@ -164,9 +166,8 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
                       </FormControl>
                       <SelectContent>
                          <SelectItem value="null">None</SelectItem>
-                         {availableCategories.length > 0 && (
-                          renderCategoryOptions(availableCategories, availableCategories)
-                        )}
+                         {availableCategories.length > 0 &&
+                          renderCategoryOptions(availableCategories, availableCategories)}
                       </SelectContent>
                     </Select>
                     <FormMessage />
