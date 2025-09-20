@@ -3,6 +3,10 @@ import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
 import { MaterialsDisplay } from "@/components/student/MaterialsDisplay";
 
+// This line tells Next.js to not cache this page and regenerate it on every request.
+// This ensures that any new data added to the database is reflected immediately.
+export const revalidate = 0;
+
 export async function generateStaticParams() {
   // This could also be fetched from the database if classes are dynamic
   const classNames = ['10', '12-science', '12-commerce', '12-arts'];
