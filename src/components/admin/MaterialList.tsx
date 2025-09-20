@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -39,14 +40,16 @@ const classMap: Record<string, string> = {
 }
 
 export function MaterialList({ materials: initialMaterials }: MaterialListProps) {
+  const router = useRouter();
   const [materialToDelete, setMaterialToDelete] = useState<Material | null>(null);
   const { toast } = useToast();
 
   const handleDelete = async (material: Material) => {
-    const result = await deleteMaterialAction(material.id, material.file_path);
+    const result = await deleteMaterialAction(material.id, material.file_path, material.class);
 
     if (result.success) {
         toast({ title: "Success", description: "Material deleted successfully." });
+        router.refresh();
     } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
     }

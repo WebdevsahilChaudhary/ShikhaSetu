@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -70,6 +71,7 @@ const renderCategoryOptions = (
 };
 
 export function UploadForm({ categories }: UploadFormProps) {
+  const router = useRouter();
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -118,7 +120,7 @@ export function UploadForm({ categories }: UploadFormProps) {
     const { error: insertError } = await supabase.from('materials').insert({
       title: values.title,
       class: values.class,
-      category_id: values.category_id === 'null' ? null : values.category_id,
+      category_id: values.category_id === 'null' || values.category_id === '' ? null : values.category_id,
       file_url: urlData.publicUrl,
       file_path: uploadData.path,
       size: file.size,
@@ -135,10 +137,11 @@ export function UploadForm({ categories }: UploadFormProps) {
       title: "Upload Successful",
       description: `"${values.title}" has been uploaded.`,
     });
-    form.reset();
     
-    // Use server action to revalidate cache
+    // Use server action to revalidate cache and then reset form
     await revalidateAll();
+    form.reset();
+    router.refresh();
   }
 
   return (
@@ -196,13 +199,13 @@ export function UploadForm({ categories }: UploadFormProps) {
                     <FormLabel>Category (Optional)</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      value={field.value}
+                      value={field.value || 'null'}
                       disabled={!selectedClass}
                     >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={selectedClass ? "Select a category" : "Select a class first"} />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="null">None</SelectItem>

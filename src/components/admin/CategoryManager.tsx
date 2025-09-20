@@ -36,6 +36,7 @@ import { PlusCircle } from "lucide-react";
 import type { Category } from "@/lib/types";
 import { CategoryTree } from "./CategoryTree";
 import { deleteCategoryAction, revalidateAll } from "@/app/actions";
+import { useRouter } from "next/navigation";
 
 
 const supabase = createClient(
@@ -48,6 +49,7 @@ interface CategoryManagerProps {
 }
 
 export function CategoryManager({ initialCategories }: CategoryManagerProps) {
+  const router = useRouter();
   const [isNewCategoryDialogOpen, setIsNewCategoryDialogOpen] = useState(false);
   const [isEditCategoryDialogOpen, setIsEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
@@ -79,7 +81,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
       .insert([{ 
           name: newCategoryName, 
           class_association: newClassAssociation, 
-          parent_id: newParentId === 'null' ? null : newParentId 
+          parent_id: newParentId === 'null' || newParentId === '' ? null : newParentId 
         }])
       .select()
       .single();
@@ -95,8 +97,8 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         title: "Success",
         description: `Category "${newCategoryName}" created.`,
       });
-      // Use server action to revalidate cache
       await revalidateAll();
+      router.refresh();
     }
   };
 
@@ -119,7 +121,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
       .update({ 
           name: editCategoryName, 
           class_association: editClassAssociation, 
-          parent_id: editParentId === 'null' ? null : editParentId 
+          parent_id: editParentId === 'null' || editParentId === '' ? null : editParentId 
       })
       .match({ id: categoryToEdit.id })
       .select()
@@ -131,8 +133,8 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
       setIsEditCategoryDialogOpen(false);
       setCategoryToEdit(null);
       toast({ title: "Success", description: "Category updated successfully." });
-      // Use server action to revalidate cache
       await revalidateAll();
+      router.refresh();
     }
   };
   
@@ -148,6 +150,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
         title: "Success",
         description: `Category "${category.name}" deleted.`,
       });
+      router.refresh();
     } else {
        toast({ variant: "destructive", title: "Error", description: result.error });
     }

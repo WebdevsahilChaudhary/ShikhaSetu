@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import type { Category, Material } from "@/lib/types";
+import type { Category } from "@/lib/types";
+import { Material } from "@/lib/types";
 import { useMemo } from "react";
 import { updateMaterialAction } from '@/app/actions';
 
@@ -91,7 +92,7 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const dataToUpdate = {
         ...values,
-        category_id: values.category_id === 'null' ? null : values.category_id,
+        category_id: values.category_id === 'null' || values.category_id === '' ? null : values.category_id,
     }
 
     const result = await updateMaterialAction(material.id, dataToUpdate);
@@ -99,6 +100,7 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
     if (result.success) {
       toast({ title: "Success", description: "Material updated successfully." });
       router.push('/admin/dashboard/materials');
+      router.refresh();
     } else {
       toast({ variant: "destructive", title: "Update Error", description: result.error });
     }

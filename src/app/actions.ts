@@ -3,7 +3,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import type { Material, Category } from "@/lib/types";
 
 // This centralizes the creation of a Supabase client for server-side operations.
 const createSupabaseServerClient = () => {
@@ -37,11 +36,12 @@ export async function updateMaterialAction(materialId: string, data: { title: st
         return { success: false, error: `Could not update material: ${error.message}` };
     }
 
-    revalidateAll();
+    revalidatePath('/admin/dashboard/materials');
+    revalidatePath(`/class/${data.class}`);
     return { success: true };
 }
 
-export async function deleteMaterialAction(materialId: string, filePath: string | null) {
+export async function deleteMaterialAction(materialId: string, filePath: string | null, materialClass: string) {
   const supabase = createSupabaseServerClient();
   
   // 1. Attempt to delete from storage if a file path exists.
@@ -51,6 +51,7 @@ export async function deleteMaterialAction(materialId: string, filePath: string 
       .remove([filePath]);
     
     // Log and potentially stop if storage deletion fails for a reason other than "not found".
+    // This allows deleting records even if the file was manually removed from storage.
     if (storageError && storageError.message !== 'The resource was not found') {
         console.error("Storage Error:", storageError.message);
         return { success: false, error: `Could not delete file: ${storageError.message}` };
@@ -58,20 +59,16 @@ export async function deleteMaterialAction(materialId: string, filePath: string 
   }
 
   // 2. Delete from the database.
-  const { data: deletedMaterial, error: dbError } = await supabase.from('materials').delete().match({ id: materialId }).select().single();
+  const { error: dbError } = await supabase.from('materials').delete().match({ id: materialId });
 
   if (dbError) {
     console.error("Database Error:", dbError.message);
     return { success: false, error: dbError.message };
   }
-  
-  if (!deletedMaterial) {
-      return { success: false, error: "Material not found in database." };
-  }
 
   // 3. Revalidate paths to clear caches and update the UI.
   revalidatePath('/admin/dashboard/materials');
-  revalidatePath(`/class/${deletedMaterial.class}`);
+  revalidatePath(`/class/${materialClass}`);
   
   return { success: true };
 }
