@@ -86,7 +86,7 @@ export async function updateMaterialAction(materialId: string, data: { title: st
       .update({
         title: data.title,
         class: data.class,
-        category_id: data.category_id,
+        category_id: data.category_id === 'null' || data.category_id === '' ? null : data.category_id,
       })
       .eq('id', materialId);
       
