@@ -90,17 +90,11 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
   }, [selectedClass, categories]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const dataToUpdate = {
-        ...values,
-        category_id: values.category_id === 'null' || values.category_id === '' ? null : values.category_id,
-    }
-
-    const result = await updateMaterialAction(material.id, dataToUpdate);
+    const result = await updateMaterialAction(material.id, values);
 
     if (result.success) {
       toast({ title: "Success", description: "Material updated successfully." });
       router.push('/admin/dashboard/materials');
-      router.refresh();
     } else {
       toast({ variant: "destructive", title: "Update Error", description: result.error });
     }
