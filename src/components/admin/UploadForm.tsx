@@ -32,7 +32,6 @@ const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
   class: z.string().min(1, "Please select a class."),
   category_id: z.string().optional(),
-  file: z.any().refine((files) => files?.length == 1, "File is required."),
 });
 
 interface UploadFormProps {
@@ -68,6 +67,8 @@ export function UploadForm({ categories }: UploadFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -88,14 +89,29 @@ export function UploadForm({ categories }: UploadFormProps) {
     );
   }, [selectedClass, categories]);
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+        setFile(selectedFile);
+        setFileError(null);
+    } else {
+        setFile(null);
+    }
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!file) {
+      setFileError("File is required.");
+      return;
+    }
+    setFileError(null);
     setIsSubmitting(true);
     
     const formData = new FormData();
     formData.append('title', values.title);
     formData.append('class', values.class);
     formData.append('category_id', values.category_id || 'null');
-    formData.append('file', values.file[0]);
+    formData.append('file', file);
 
     const result = await uploadMaterialAction(formData);
 
@@ -105,6 +121,12 @@ export function UploadForm({ categories }: UploadFormProps) {
         description: `"${values.title}" has been uploaded.`,
       });
       form.reset();
+      setFile(null); 
+      // Reset file input visually if possible (requires a ref)
+      const fileInput = document.getElementById('file-input') as HTMLInputElement;
+      if (fileInput) {
+          fileInput.value = "";
+      }
       router.refresh();
     } else {
       toast({ variant: "destructive", title: "Upload Failed", description: result.error });
@@ -189,23 +211,13 @@ export function UploadForm({ categories }: UploadFormProps) {
               />
             </div>
             
-            <FormField
-              control={form.control}
-              name="file"
-              render={({ field: { onChange, value, ...rest }}) => {
-                // We need to use a ref for the file input
-                const { ref, ...fieldProps } = form.register("file");
-                return (
-                  <FormItem>
-                    <FormLabel>File</FormLabel>
-                    <FormControl>
-                      <Input type="file" {...fieldProps} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )
-              }}
-            />
+            <FormItem>
+                <FormLabel>File</FormLabel>
+                <FormControl>
+                    <Input id="file-input" type="file" onChange={handleFileChange} />
+                </FormControl>
+                {fileError && <p className="text-sm font-medium text-destructive">{fileError}</p>}
+            </FormItem>
 
             <Button type="submit" className="font-semibold" disabled={isSubmitting}>
               {isSubmitting ? "Uploading..." : "Upload Material"}
