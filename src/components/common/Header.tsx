@@ -20,11 +20,6 @@ export function Header() {
             Donate
           </Link>
         </Button>
-        <Button variant="ghost" asChild className="hidden">
-          <Link href="/admin">
-            Admin Panel
-          </Link>
-        </Button>
       </nav>
     </header>
   );
