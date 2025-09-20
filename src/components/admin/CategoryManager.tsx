@@ -33,9 +33,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import type { Category } from "@/lib/types";
 import { CategoryTree } from "./CategoryTree";
+import { deleteCategoryAction } from "@/app/actions";
+
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -84,7 +86,8 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
     } else if (data) {
-      setCategories([data, ...categories]);
+      // No longer need to manually update state, router.refresh will do it.
+      // setCategories([data, ...categories]);
       setNewCategoryName("");
       setNewClassAssociation(null);
       setNewParentId(null);
@@ -121,7 +124,8 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
     if (error) {
       toast({ variant: "destructive", title: "Update Error", description: error.message });
     } else if (data) {
-      setCategories(categories.map(c => (c.id === data.id ? data : c)));
+      // No longer need to manually update state, router.refresh will do it.
+      // setCategories(categories.map(c => (c.id === data.id ? data : c)));
       setIsEditCategoryDialogOpen(false);
       setCategoryToEdit(null);
       toast({ title: "Success", description: "Category updated successfully." });
@@ -144,23 +148,21 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
   }
 
   const handleDeleteCategory = async (category: Category) => {
-    const { error } = await supabase.from('categories').delete().match({ id: category.id });
+     const result = await deleteCategoryAction(category);
 
-    if (error) {
-       toast({ variant: "destructive", title: "Error", description: error.message });
-    } else {
-      setCategories(categories.filter((c) => c.id !== category.id));
+    if (result.success) {
       toast({
         title: "Success",
         description: `Category "${category.name}" deleted.`,
       });
-      router.refresh();
+       // No longer need to manually update state or use router.refresh()
+       // setCategories(categories.filter((c) => c.id !== category.id));
+    } else {
+       toast({ variant: "destructive", title: "Error", description: result.error });
     }
     setCategoryToDelete(null);
   };
   
-  const topLevelCategories = categories.filter(c => !c.parent_id);
-
   return (
     <>
       <div className="flex justify-end mb-4">
@@ -203,7 +205,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="parent-category">Parent Category (Optional)</Label>
-                 <Select onValueChange={setNewParentId} value={newParentId || undefined}>
+                 <Select onValueChange={setNewParentId} value={newParentId || 'null'}>
                     <SelectTrigger id="parent-category">
                       <SelectValue placeholder="Select a parent category" />
                     </SelectTrigger>
@@ -226,7 +228,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
 
       <div className="border rounded-lg p-4">
         <CategoryTree 
-          categories={categories}
+          categories={initialCategories} // Pass initialCategories to ensure it re-renders on page refresh
           onEdit={openEditDialog}
           onDelete={openDeleteDialog}
         />
@@ -268,7 +270,7 @@ export function CategoryManager({ initialCategories }: CategoryManagerProps) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="null">None (Top-Level)</SelectItem>
-                      {categories.filter(c => c.id !== categoryToEdit?.id).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      {categories.filter(c => c.id !== categoryToedit?.id).map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
               </div>

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter }from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -27,11 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Edit, Trash2 } from "lucide-react";
 import type { Material } from "@/lib/types";
 import { format } from "date-fns";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { deleteMaterialAction } from "@/app/actions";
 
 interface MaterialListProps {
   materials: Material[];
@@ -47,31 +42,17 @@ const classMap: Record<string, string> = {
 export function MaterialList({ materials: initialMaterials }: MaterialListProps) {
   const [materialToDelete, setMaterialToDelete] = useState<Material | null>(null);
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleDelete = async (material: Material) => {
-    // 1. Try to delete from storage if a path exists
-    if (material.file_path) {
-      const { error: storageError } = await supabase.storage
-          .from('materials')
-          .remove([material.file_path]);
-      
-      // Log storage error but don't stop, unless it's a critical error other than "not found"
-      if (storageError && storageError.message !== 'The resource was not found') {
-          toast({ variant: "destructive", title: "Storage Error", description: `Could not delete file: ${storageError.message}` });
-          // Depending on policy, you might want to return here.
-          // For now, we'll allow DB deletion even if storage deletion fails.
-      }
-    }
+    const result = await deleteMaterialAction(material);
 
-    // 2. Delete from database
-    const { error: dbError } = await supabase.from('materials').delete().match({ id: material.id });
-
-    if (dbError) {
-        toast({ variant: "destructive", title: "Database Error", description: dbError.message });
-    } else {
+    if (result.success) {
         toast({ title: "Success", description: "Material deleted successfully." });
-        // Force a full page reload to ensure the list is re-fetched from the DB
-        window.location.reload();
+        // The server action handles revalidation, so the UI will update automatically
+        // on the next navigation or refresh.
+    } else {
+        toast({ variant: "destructive", title: "Error", description: result.error });
     }
     setMaterialToDelete(null);
   };
