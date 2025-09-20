@@ -20,6 +20,64 @@ const createSupabaseServerClient = () => {
   );
 };
 
+
+export async function uploadMaterialAction(formData: FormData) {
+    const supabase = createSupabaseServerClient();
+
+    const title = formData.get('title') as string;
+    const materialClass = formData.get('class') as string;
+    const categoryId = formData.get('category_id') as string;
+    const file = formData.get('file') as File;
+
+    if (!file || file.size === 0) {
+        return { success: false, error: 'File is required.' };
+    }
+
+    // 1. Upload file to Supabase Storage
+    const filePath = `${materialClass}/${Date.now()}-${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('materials')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      return { success: false, error: `Storage Error: ${uploadError.message}` };
+    }
+
+    // 2. Get public URL
+    const { data: urlData } = supabase.storage
+      .from('materials')
+      .getPublicUrl(filePath);
+
+    if (!urlData) {
+        // Attempt to clean up the uploaded file if we can't get a URL
+        await supabase.storage.from('materials').remove([filePath]);
+        return { success: false, error: "Could not get file URL." };
+    }
+
+    // 3. Insert into materials table
+    const { error: insertError } = await supabase.from('materials').insert({
+      title: title,
+      class: materialClass,
+      category_id: categoryId === 'null' || categoryId === '' ? null : categoryId,
+      file_url: urlData.publicUrl,
+      file_path: uploadData.path,
+      size: file.size,
+    });
+
+    if (insertError) {
+       // Attempt to clean up the uploaded file if db insert fails
+      await supabase.storage.from('materials').remove([filePath]);
+      return { success: false, error: `Database Error: ${insertError.message}` };
+    }
+    
+    // 4. Revalidate relevant paths
+    revalidatePath('/admin/dashboard');
+    revalidatePath(`/class/${materialClass}`);
+
+    return { success: true };
+}
+
+
 export async function updateMaterialAction(materialId: string, data: { title: string; class: string; category_id: string | null; }) {
     const supabase = createSupabaseServerClient();
     
