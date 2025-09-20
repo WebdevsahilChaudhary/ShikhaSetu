@@ -44,7 +44,7 @@ const renderCategoryOptions = (
   allCategories: Category[],
   parentId: string | null = null,
   level = 0
-) => {
+): React.ReactNode[] => {
   const items = categories.filter((c) => c.parent_id === parentId);
   let options: React.ReactNode[] = [];
   
@@ -55,9 +55,8 @@ const renderCategoryOptions = (
       </SelectItem>
     );
     // Recursively render children
-    options = options.concat(
-      renderCategoryOptions(allCategories, allCategories, item.id, level + 1)
-    );
+    const childOptions = renderCategoryOptions(allCategories, allCategories, item.id, level + 1);
+    options = options.concat(childOptions);
   });
   
   return options;
@@ -168,7 +167,7 @@ export function UploadForm({ categories }: UploadFormProps) {
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a class" />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="10">Class 10th</SelectItem>
