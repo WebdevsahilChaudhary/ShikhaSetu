@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -27,12 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { Category, Material } from "@/lib/types";
 import { useMemo } from "react";
-import { revalidateAll } from '@/app/actions';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { updateMaterialAction } from '@/app/actions';
 
 const formSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters."),
@@ -95,21 +89,18 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
   }, [selectedClass, categories]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const { error } = await supabase
-      .from('materials')
-      .update({
-        title: values.title,
-        class: values.class,
+    const dataToUpdate = {
+        ...values,
         category_id: values.category_id === 'null' ? null : values.category_id,
-      })
-      .eq('id', material.id);
+    }
 
-    if (error) {
-      toast({ variant: "destructive", title: "Update Error", description: error.message });
-    } else {
+    const result = await updateMaterialAction(material.id, dataToUpdate);
+
+    if (result.success) {
       toast({ title: "Success", description: "Material updated successfully." });
-      await revalidateAll();
       router.push('/admin/dashboard/materials');
+    } else {
+      toast({ variant: "destructive", title: "Update Error", description: result.error });
     }
   }
 

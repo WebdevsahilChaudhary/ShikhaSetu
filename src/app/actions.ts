@@ -21,6 +21,26 @@ const createSupabaseServerClient = () => {
   );
 };
 
+export async function updateMaterialAction(materialId: string, data: { title: string; class: string; category_id: string | null; }) {
+    const supabase = createSupabaseServerClient();
+    
+    const { error } = await supabase
+      .from('materials')
+      .update({
+        title: data.title,
+        class: data.class,
+        category_id: data.category_id,
+      })
+      .eq('id', materialId);
+      
+    if (error) {
+        return { success: false, error: `Could not update material: ${error.message}` };
+    }
+
+    revalidateAll();
+    return { success: true };
+}
+
 export async function deleteMaterialAction(materialId: string, filePath: string | null) {
   const supabase = createSupabaseServerClient();
   
