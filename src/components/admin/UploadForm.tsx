@@ -3,7 +3,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { Category } from "@/lib/types";
 import { useMemo } from "react";
 import React from "react";
+import { revalidateAll } from "@/app/actions";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -71,7 +71,6 @@ const renderCategoryOptions = (
 
 export function UploadForm({ categories }: UploadFormProps) {
   const { toast } = useToast();
-  const router = useRouter();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -137,8 +136,9 @@ export function UploadForm({ categories }: UploadFormProps) {
       description: `"${values.title}" has been uploaded.`,
     });
     form.reset();
-    // A full page reload might be better to ensure all state is fresh across components
-    window.location.reload();
+    
+    // Use server action to revalidate cache
+    await revalidateAll();
   }
 
   return (

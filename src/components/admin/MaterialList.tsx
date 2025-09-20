@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter }from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,15 +41,12 @@ const classMap: Record<string, string> = {
 export function MaterialList({ materials: initialMaterials }: MaterialListProps) {
   const [materialToDelete, setMaterialToDelete] = useState<Material | null>(null);
   const { toast } = useToast();
-  const router = useRouter();
 
   const handleDelete = async (material: Material) => {
-    const result = await deleteMaterialAction(material);
+    const result = await deleteMaterialAction(material.id, material.file_path);
 
     if (result.success) {
         toast({ title: "Success", description: "Material deleted successfully." });
-        // The server action handles revalidation, so the UI will update automatically
-        // on the next navigation or refresh.
     } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
     }

@@ -21,14 +21,14 @@ const createSupabaseServerClient = () => {
   );
 };
 
-export async function deleteMaterialAction(material: Material) {
+export async function deleteMaterialAction(materialId: string, filePath: string | null) {
   const supabase = createSupabaseServerClient();
   
   // 1. Attempt to delete from storage if a file path exists.
-  if (material.file_path) {
+  if (filePath) {
     const { error: storageError } = await supabase.storage
       .from('materials')
-      .remove([material.file_path]);
+      .remove([filePath]);
     
     // Log and potentially stop if storage deletion fails for a reason other than "not found".
     if (storageError && storageError.message !== 'The resource was not found') {
@@ -38,25 +38,45 @@ export async function deleteMaterialAction(material: Material) {
   }
 
   // 2. Delete from the database.
-  const { error: dbError } = await supabase.from('materials').delete().match({ id: material.id });
+  const { data: deletedMaterial, error: dbError } = await supabase.from('materials').delete().match({ id: materialId }).select().single();
 
   if (dbError) {
     console.error("Database Error:", dbError.message);
     return { success: false, error: dbError.message };
   }
+  
+  if (!deletedMaterial) {
+      return { success: false, error: "Material not found in database." };
+  }
 
   // 3. Revalidate paths to clear caches and update the UI.
   revalidatePath('/admin/dashboard/materials');
-  revalidatePath(`/class/${material.class}`);
+  revalidatePath(`/class/${deletedMaterial.class}`);
   
   return { success: true };
 }
 
 
-export async function deleteCategoryAction(category: Category) {
+export async function deleteCategoryAction(categoryId: string) {
   const supabase = createSupabaseServerClient();
+  
+  // First, check if the category has children.
+  const { data: children, error: childrenError } = await supabase
+    .from('categories')
+    .select('id')
+    .eq('parent_id', categoryId)
+    .limit(1);
 
-  const { error } = await supabase.from('categories').delete().match({ id: category.id });
+  if (childrenError) {
+      console.error("Error checking for children:", childrenError.message);
+      return { success: false, error: "Could not verify category children." };
+  }
+  if (children && children.length > 0) {
+      return { success: false, error: "This category has sub-categories. Please delete or re-assign them first." };
+  }
+
+
+  const { error } = await supabase.from('categories').delete().match({ id: categoryId });
 
   if (error) {
     console.error("Database Error:", error.message);
@@ -73,4 +93,8 @@ export async function deleteCategoryAction(category: Category) {
   revalidatePath('/class/12-arts');
 
   return { success: true };
+}
+
+export async function revalidateAll() {
+    revalidatePath('/', 'layout');
 }

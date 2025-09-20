@@ -27,6 +27,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import type { Category, Material } from "@/lib/types";
 import { useMemo } from "react";
+import { revalidateAll } from '@/app/actions';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -107,8 +108,8 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
       toast({ variant: "destructive", title: "Update Error", description: error.message });
     } else {
       toast({ title: "Success", description: "Material updated successfully." });
+      await revalidateAll();
       router.push('/admin/dashboard/materials');
-      router.refresh();
     }
   }
 
@@ -173,7 +174,7 @@ export function EditMaterialForm({ material, categories }: EditMaterialFormProps
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={selectedClass ? "Select a category" : "Select a class first"} />
-                        </SelectTrigger>
+                        </Trigger>
                       </FormControl>
                       <SelectContent>
                          <SelectItem value="null">None</SelectItem>
